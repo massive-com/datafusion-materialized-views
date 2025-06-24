@@ -28,9 +28,8 @@ keywords = ["arrow", "arrow-rs", "datafusion"]
 rust-version = "1.80"
 
 [dependencies]
-
-arrow = { version = "55.0.0" }
-arrow-schema = { version = "55.0.0" }
+arrow = "55.1.0"
+arrow-schema = "55.1.0"
 async-trait = "0.1"
 chrono = "= 0.4.40"
 dashmap = "6"
