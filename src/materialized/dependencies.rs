@@ -578,10 +578,6 @@ fn pushdown_projection_inexact(plan: LogicalPlan, indices: &HashSet<usize>) -> R
                 .map(|&i| unnest.dependency_indices[i])
                 .collect::<HashSet<_>>();
 
-            println!("incoming indices: {:?}", indices);
-            println!("child_indices: {:?}", child_indices);
-            println!("exec_columns: {:?}", unnest.exec_columns);
-
             let input_using_columns = unnest.input.using_columns()?;
             let input_schema = unnest.input.schema();
             let columns_to_unnest =
@@ -609,9 +605,6 @@ fn pushdown_projection_inexact(plan: LogicalPlan, indices: &HashSet<usize>) -> R
                 .filter_map(|(i, c)| indices.contains(&i).then_some(c))
                 .map(Expr::Column)
                 .collect_vec();
-
-            println!("columns_to_unnest: {:?}", columns_to_unnest);
-            println!("columns_to_project: {:?}", columns_to_project);
 
             // GUARD: if after pushdown the set of relevant unnest columns is empty,
             // avoid constructing an Unnest node with zero exec columns (which will
@@ -1863,56 +1856,84 @@ mod test {
     }
 
     #[test]
-    fn test_pushdown_unnest_guard_no_columns() -> Result<()> {
-        // Build a minimal input plan that has a list<struct> column named "__meta_0"
-        // so that we can construct an Unnest node against it. The exact schema
-        // details follow the expectations in production.
+    fn test_pushdown_unnest_guard_partition_date_only() -> Result<()> {
+        // This test simulates a simplified MV scenario:
+        //
+        // WITH events_structs AS (
+        //   SELECT id, date, unnest(events) AS evs
+        //   FROM base_table
+        // ),
+        // flattened_events AS (
+        //   SELECT id, date, evs.event_type, evs.event_time
+        //   FROM events_structs
+        // ),
+        // SELECT id, date, MAX(...) ...
+        // GROUP BY id, date
+        //
+        // The partition column is "date". During dependency plan
+        // building we only request "date" from this subtree,
+        // so pushdown_projection_inexact receives indices for
+        // the `date` column only. The guard must kick in:
+        // unnest(events) becomes unused, and the plan should
+        // collapse to just projecting `date` from the child.
 
-        // NOTE: constructing a fully realistic plan that mirrors the MV path can be
-        // somewhat verbose. The goal of this test is to ensure pushdown_projection_inexact
-        // does not panic when an Unnest node is encountered and after pushdown there are
-        // zero relevant unnest columns.
+        // 1. Build schema for base table
+        let id = Field::new("id", DataType::Utf8, true);
+        let date = Field::new("date", DataType::Utf8, true);
 
-        // Create Arrow fields for the struct inside the list
+        // events: list<struct<event_type, event_time>>
         let event_type = Field::new("event_type", DataType::Utf8, true);
         let event_time = Field::new("event_time", DataType::Utf8, true);
-        let item_field = Field::new(
+        let events_struct = Field::new(
             "item",
             DataType::Struct(Fields::from(vec![event_type, event_time])),
             true,
         );
-        // List<Field> column type
-        let meta_field = Field::new(
-            "__meta_0",
-            DataType::List(FieldRef::from(Box::new(item_field))),
+        let events = Field::new(
+            "events",
+            DataType::List(FieldRef::from(Box::new(events_struct))),
             true,
         );
 
-        // Convert fields into DFSchema fields (qualified with no relation)
-        let qualified_fields = vec![(None, Arc::new(meta_field.clone()))];
+        // Build DFSchema: (id, date, events)
+        let qualified_fields = vec![
+            (None, Arc::new(id.clone())),
+            (None, Arc::new(date.clone())),
+            (None, Arc::new(events.clone())),
+        ];
         let df_schema =
             DFSchema::new_with_metadata(qualified_fields, std::collections::HashMap::new())?;
 
-        // Build an EmptyRelation using the DFSchema
+        // 2. Build a dummy child plan (EmptyRelation with the schema)
         let empty = LogicalPlan::EmptyRelation(EmptyRelation {
             produce_one_row: false,
             schema: Arc::new(df_schema),
         });
 
-        // Create an Unnest logical plan node using the helper `unnest_with_options`.
-        // We need to pass a Column that refers to "__meta_0". Use Column::from_name.
-        let col = Column::from_name("__meta_0");
-        let unnest_plan = unnest(empty.clone(), vec![col.clone()])?;
+        // 3. Wrap it with an Unnest node on the "events" column
+        let events_col = Column::from_name("events");
+        let unnest_plan = unnest(empty.clone(), vec![events_col.clone()])?;
 
-        // Now call pushdown_projection_inexact with indices that lead to an empty
-        // columns_to_unnest after the filtering logic. For example, set indices
-        // to an empty set (meaning caller requested no output columns).
-        let indices: HashSet<usize> = HashSet::new();
+        // 4. Partition column is "date". Look up its actual index dynamically.
+        let date_idx = unnest_plan
+            .schema()
+            .index_of_column(&Column::from_name("date"))?;
+        let mut indices: HashSet<usize> = HashSet::new();
+        indices.insert(date_idx);
 
-        // Should not error: previously this path could result in constructing an
-        // Unnest with zero exec columns during rewrite; with the guard, it will
-        // simply project from the child without creating an empty Unnest node.
-        let _res = pushdown_projection_inexact(unnest_plan, &indices)?;
+        // 5. Call pushdown_projection_inexact with {date}
+        let res = pushdown_projection_inexact(unnest_plan, &indices)?;
+
+        // 6. Assert the result schema only contains `date`
+        let cols: Vec<String> = res
+            .schema()
+            .fields()
+            .iter()
+            .map(|f| f.name().to_string())
+            .collect();
+
+        assert_eq!(cols, vec!["date"]);
+
         Ok(())
     }
 }
