@@ -265,8 +265,11 @@ pub fn mv_dependencies_plan(
             row_metadata_registry,
         )
     } else {
+        println!("partition_cols: {:?}", partition_cols);
         // Prune non-partition columns from all table scans
         let pruned_plan = pushdown_projection_inexact(plan, &partition_col_indices)?;
+
+        println!("pruned_plan: {:?}", pruned_plan);
 
         // Now bubble up file metadata to the top of the plan
         push_up_file_metadata(pruned_plan, &config_options.catalog, row_metadata_registry)
@@ -575,6 +578,10 @@ fn pushdown_projection_inexact(plan: LogicalPlan, indices: &HashSet<usize>) -> R
                 .map(|&i| unnest.dependency_indices[i])
                 .collect::<HashSet<_>>();
 
+            println!("incoming indices: {:?}", indices);
+            println!("child_indices: {:?}", child_indices);
+            println!("exec_columns: {:?}", unnest.exec_columns);
+
             let input_using_columns = unnest.input.using_columns()?;
             let input_schema = unnest.input.schema();
             let columns_to_unnest =
@@ -602,6 +609,9 @@ fn pushdown_projection_inexact(plan: LogicalPlan, indices: &HashSet<usize>) -> R
                 .filter_map(|(i, c)| indices.contains(&i).then_some(c))
                 .map(Expr::Column)
                 .collect_vec();
+
+            println!("columns_to_unnest: {:?}", columns_to_unnest);
+            println!("columns_to_project: {:?}", columns_to_project);
 
             // GUARD: if after pushdown the set of relevant unnest columns is empty,
             // avoid constructing an Unnest node with zero exec columns (which will
