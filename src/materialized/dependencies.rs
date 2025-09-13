@@ -603,6 +603,19 @@ fn pushdown_projection_inexact(plan: LogicalPlan, indices: &HashSet<usize>) -> R
                 .map(Expr::Column)
                 .collect_vec();
 
+            // GUARD: if after pushdown the set of relevant unnest columns is empty,
+            // avoid constructing an Unnest node with zero exec columns (which will
+            // later error in Unnest::try_new). Instead, simply project the
+            // desired output columns from the child plan (after pushing down the child projection).
+            if columns_to_unnest.is_empty() {
+                return LogicalPlanBuilder::from(pushdown_projection_inexact(
+                    Arc::unwrap_or_clone(unnest.input),
+                    &child_indices,
+                )?)
+                .project(columns_to_project)?
+                .build();
+            }
+
             LogicalPlanBuilder::from(pushdown_projection_inexact(
                 Arc::unwrap_or_clone(unnest.input),
                 &child_indices,
@@ -922,7 +935,7 @@ mod test {
     use std::{any::Any, collections::HashSet, sync::Arc};
 
     use arrow::util::pretty::pretty_format_batches;
-    use arrow_schema::SchemaRef;
+    use arrow_schema::{DataType, Field, FieldRef, Fields, SchemaRef};
     use datafusion::{
         assert_batches_eq, assert_batches_sorted_eq,
         catalog::{Session, TableProvider},
@@ -930,8 +943,9 @@ mod test {
         execution::session_state::SessionStateBuilder,
         prelude::{DataFrame, SessionConfig, SessionContext},
     };
-    use datafusion_common::{Column, Result, ScalarValue};
-    use datafusion_expr::{Expr, JoinType, LogicalPlan, TableType};
+    use datafusion_common::{Column, DFSchema, Result, ScalarValue};
+    use datafusion_expr::builder::unnest;
+    use datafusion_expr::{EmptyRelation, Expr, JoinType, LogicalPlan, TableType};
     use datafusion_physical_plan::ExecutionPlan;
     use itertools::Itertools;
 
@@ -1835,6 +1849,60 @@ mod test {
                 .unwrap_or_else(|e| panic!("{} failed: {e}", case.name));
         }
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_pushdown_unnest_guard_no_columns() -> Result<()> {
+        // Build a minimal input plan that has a list<struct> column named "__meta_0"
+        // so that we can construct an Unnest node against it. The exact schema
+        // details follow the expectations in production.
+
+        // NOTE: constructing a fully realistic plan that mirrors the MV path can be
+        // somewhat verbose. The goal of this test is to ensure pushdown_projection_inexact
+        // does not panic when an Unnest node is encountered and after pushdown there are
+        // zero relevant unnest columns.
+
+        // Create Arrow fields for the struct inside the list
+        let event_type = Field::new("event_type", DataType::Utf8, true);
+        let event_time = Field::new("event_time", DataType::Utf8, true);
+        let item_field = Field::new(
+            "item",
+            DataType::Struct(Fields::from(vec![event_type, event_time])),
+            true,
+        );
+        // List<Field> column type
+        let meta_field = Field::new(
+            "__meta_0",
+            DataType::List(FieldRef::from(Box::new(item_field))),
+            true,
+        );
+
+        // Convert fields into DFSchema fields (qualified with no relation)
+        let qualified_fields = vec![(None, Arc::new(meta_field.clone()))];
+        let df_schema =
+            DFSchema::new_with_metadata(qualified_fields, std::collections::HashMap::new())?;
+
+        // Build an EmptyRelation using the DFSchema
+        let empty = LogicalPlan::EmptyRelation(EmptyRelation {
+            produce_one_row: false,
+            schema: Arc::new(df_schema),
+        });
+
+        // Create an Unnest logical plan node using the helper `unnest_with_options`.
+        // We need to pass a Column that refers to "__meta_0". Use Column::from_name.
+        let col = Column::from_name("__meta_0");
+        let unnest_plan = unnest(empty.clone(), vec![col.clone()])?;
+
+        // Now call pushdown_projection_inexact with indices that lead to an empty
+        // columns_to_unnest after the filtering logic. For example, set indices
+        // to an empty set (meaning caller requested no output columns).
+        let indices: HashSet<usize> = HashSet::new();
+
+        // Should not error: previously this path could result in constructing an
+        // Unnest with zero exec columns during rewrite; with the guard, it will
+        // simply project from the child without creating an empty Unnest node.
+        let _res = pushdown_projection_inexact(unnest_plan, &indices)?;
         Ok(())
     }
 }
