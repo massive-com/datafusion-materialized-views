@@ -265,11 +265,8 @@ pub fn mv_dependencies_plan(
             row_metadata_registry,
         )
     } else {
-        println!("partition_cols: {:?}", partition_cols);
         // Prune non-partition columns from all table scans
         let pruned_plan = pushdown_projection_inexact(plan, &partition_col_indices)?;
-
-        println!("pruned_plan: {:?}", pruned_plan);
 
         // Now bubble up file metadata to the top of the plan
         push_up_file_metadata(pruned_plan, &config_options.catalog, row_metadata_registry)
