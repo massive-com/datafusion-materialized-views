@@ -607,6 +607,8 @@ fn pushdown_projection_inexact(plan: LogicalPlan, indices: &HashSet<usize>) -> R
             // avoid constructing an Unnest node with zero exec columns (which will
             // later error in Unnest::try_new). Instead, simply project the
             // desired output columns from the child plan (after pushing down the child projection).
+            // Related PR: https://github.com/apache/datafusion/pull/16632, after that we must
+            // also check for empty exec columns here.
             if columns_to_unnest.is_empty() {
                 return LogicalPlanBuilder::from(pushdown_projection_inexact(
                     Arc::unwrap_or_clone(unnest.input),
