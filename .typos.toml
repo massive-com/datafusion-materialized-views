@@ -18,7 +18,5 @@
 # typos configuration file
 # Place this file in the project root (same level as Cargo.toml)
 [default]
-
-# Exclude Cargo.toml from spell checking
 [default.extend-exclude]
-paths = ["./Cargo.toml"]
+paths = ["**/Cargo.toml"]
