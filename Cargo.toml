@@ -32,15 +32,15 @@ arrow = "56.0.0"
 arrow-schema = "56.0.0"
 async-trait = "0.1.89"
 dashmap = "6"
-datafusion = "50"
-datafusion-common = "50"
-datafusion-expr = "50"
-datafusion-functions = "50"
-datafusion-functions-aggregate = "50"
-datafusion-optimizer = "50"
-datafusion-physical-expr = "50"
-datafusion-physical-plan = "50"
-datafusion-sql = "50"
+datafusion = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "ba0e3a0" }
+datafusion-common = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "ba0e3a0" }
+datafusion-expr = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "ba0e3a0" }
+datafusion-functions = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "ba0e3a0" }
+datafusion-functions-aggregate = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "ba0e3a0" }
+datafusion-optimizer = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "ba0e3a0" }
+datafusion-physical-expr = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "ba0e3a0" }
+datafusion-physical-plan = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "ba0e3a0" }
+datafusion-sql = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "ba0e3a0" }
 futures = "0.3"
 itertools = "0.14"
 log = "0.4"

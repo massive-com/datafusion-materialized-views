@@ -35,6 +35,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: crate-ci/typos@v1.13.10
+        with:
+          config: .typos.toml
 
   check:
     name: Check
