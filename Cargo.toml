@@ -49,11 +49,11 @@ ordered-float = "5.0.0"
 
 [dev-dependencies]
 anyhow = "1.0.95"
+criterion = "0.4"
 env_logger = "0.11.6"
 tempfile = "3.14.0"
 tokio = "1.42.0"
 url = "2.5.4"
-criterion = "0.4"
 
 [[bench]]
 name = "materialized_views_benchmark"
