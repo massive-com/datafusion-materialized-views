@@ -53,3 +53,9 @@ env_logger = "0.11.6"
 tempfile = "3.14.0"
 tokio = "1.42.0"
 url = "2.5.4"
+criterion = "0.4"
+
+[[bench]]
+name = "materialized_views_benchmark"
+harness = false
+path = "benches/materialized_views_benchmark.rs"
