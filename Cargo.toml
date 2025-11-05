@@ -21,11 +21,11 @@ version = "0.1.1"
 edition = "2021"
 homepage = "https://github.com/datafusion-contrib/datafusion-materialized-views"
 repository = "https://github.com/datafusion-contrib/datafusion-materialized-views"
-authors = ["Matthew Cramerus <matt@polygon.io>"]
+authors = ["Massive Engineering <engineering@massive.com>"]
 license = "Apache-2.0"
 description = "Materialized Views & Query Rewriting in DataFusion"
 keywords = ["arrow", "arrow-rs", "datafusion"]
-rust-version = "1.80"
+rust-version = "1.91"
 
 [dependencies]
 
@@ -34,15 +34,15 @@ arrow-schema = { version = "55.0.0" }
 async-trait = "0.1"
 chrono = "= 0.4.40"
 dashmap = "6"
-datafusion = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "a13a6fe" }
-datafusion-common = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "a13a6fe" }
-datafusion-expr = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "a13a6fe" }
-datafusion-functions = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "a13a6fe" }
-datafusion-functions-aggregate = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "a13a6fe" }
-datafusion-optimizer = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "a13a6fe" }
-datafusion-physical-expr = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "a13a6fe" }
-datafusion-physical-plan = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "a13a6fe" }
-datafusion-sql = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "a13a6fe" }
+datafusion = { git = "https://github.com/massive-com/arrow-datafusion", rev = "a13a6fe" }
+datafusion-common = { git = "https://github.com/massive-com/arrow-datafusion", rev = "a13a6fe" }
+datafusion-expr = { git = "https://github.com/massive-com/arrow-datafusion", rev = "a13a6fe" }
+datafusion-functions = { git = "https://github.com/massive-com/arrow-datafusion", rev = "a13a6fe" }
+datafusion-functions-aggregate = { git = "https://github.com/massive-com/arrow-datafusion", rev = "a13a6fe" }
+datafusion-optimizer = { git = "https://github.com/massive-com/arrow-datafusion", rev = "a13a6fe" }
+datafusion-physical-expr = { git = "https://github.com/massive-com/arrow-datafusion", rev = "a13a6fe" }
+datafusion-physical-plan = { git = "https://github.com/massive-com/arrow-datafusion", rev = "a13a6fe" }
+datafusion-sql = { git = "https://github.com/massive-com/arrow-datafusion", rev = "a13a6fe" }
 futures = "0.3"
 itertools = "0.14"
 log = "0.4"
