@@ -28,19 +28,19 @@ keywords = ["arrow", "arrow-rs", "datafusion"]
 rust-version = "1.85.1"
 
 [dependencies]
-arrow = "56.0.0"
-arrow-schema = "56.0.0"
-async-trait = "0.1.89"
+arrow = { git = "https://github.com/influxdata/arrow-rs", rev = "36685f0" }
+arrow-schema = { git = "https://github.com/influxdata/arrow-rs", rev = "36685f0" }
+async-trait = "0.1"
 dashmap = "6"
-datafusion = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "6420a01" }
-datafusion-common = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "6420a01" }
-datafusion-expr = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "6420a01" }
-datafusion-functions = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "6420a01" }
-datafusion-functions-aggregate = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "6420a01" }
-datafusion-optimizer = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "6420a01" }
-datafusion-physical-expr = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "6420a01" }
-datafusion-physical-plan = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "6420a01" }
-datafusion-sql = { git = "https://github.com/polygon-io/arrow-datafusion", rev = "6420a01" }
+datafusion = { git = "https://github.com/massive-com/arrow-datafusion", rev = "6420a01" }
+datafusion-common = { git = "https://github.com/massive-com/arrow-datafusion", rev = "6420a01" }
+datafusion-expr = { git = "https://github.com/massive-com/arrow-datafusion", rev = "6420a01" }
+datafusion-functions = { git = "https://github.com/massive-com/arrow-datafusion", rev = "6420a01" }
+datafusion-functions-aggregate = { git = "https://github.com/massive-com/arrow-datafusion", rev = "6420a01" }
+datafusion-optimizer = { git = "https://github.com/massive-com/arrow-datafusion", rev = "6420a01" }
+datafusion-physical-expr = { git = "https://github.com/massive-com/arrow-datafusion", rev = "6420a01" }
+datafusion-physical-plan = { git = "https://github.com/massive-com/arrow-datafusion", rev = "6420a01" }
+datafusion-sql = { git = "https://github.com/massive-com/arrow-datafusion", rev = "6420a01" }
 futures = "0.3"
 itertools = "0.14"
 log = "0.4"
