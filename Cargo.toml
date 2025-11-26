@@ -28,8 +28,9 @@ keywords = ["arrow", "arrow-rs", "datafusion"]
 rust-version = "1.88.0"
 
 [dependencies]
-arrow = "56.0.0"
-arrow-schema = "56.0.0"
+aquamarine = "0.6.0"
+arrow = "57.0.0"
+arrow-schema = "57.0.0"
 async-trait = "0.1.89"
 dashmap = "6"
 datafusion = { git = "https://github.com/massive-com/arrow-datafusion", rev = "c958b4e" }
