@@ -28,19 +28,20 @@ keywords = ["arrow", "arrow-rs", "datafusion"]
 rust-version = "1.88.0"
 
 [dependencies]
-arrow = "56.0.0"
-arrow-schema = "56.0.0"
+aquamarine = "0.6.0"
+arrow = "57.0.0"
+arrow-schema = "57.0.0"
 async-trait = "0.1.89"
 dashmap = "6"
-datafusion = { git = "https://github.com/massive-com/arrow-datafusion", rev = "b5a4d29" }
-datafusion-common = { git = "https://github.com/massive-com/arrow-datafusion", rev = "b5a4d29" }
-datafusion-expr = { git = "https://github.com/massive-com/arrow-datafusion", rev = "b5a4d29" }
-datafusion-functions = { git = "https://github.com/massive-com/arrow-datafusion", rev = "b5a4d29" }
-datafusion-functions-aggregate = { git = "https://github.com/massive-com/arrow-datafusion", rev = "b5a4d29" }
-datafusion-optimizer = { git = "https://github.com/massive-com/arrow-datafusion", rev = "b5a4d29" }
-datafusion-physical-expr = { git = "https://github.com/massive-com/arrow-datafusion", rev = "b5a4d29" }
-datafusion-physical-plan = { git = "https://github.com/massive-com/arrow-datafusion", rev = "b5a4d29" }
-datafusion-sql = { git = "https://github.com/massive-com/arrow-datafusion", rev = "b5a4d29" }
+datafusion = { git = "https://github.com/massive-com/arrow-datafusion", rev = "c958b4e" }
+datafusion-common = { git = "https://github.com/massive-com/arrow-datafusion", rev = "c958b4e" }
+datafusion-expr = { git = "https://github.com/massive-com/arrow-datafusion", rev = "c958b4e" }
+datafusion-functions = { git = "https://github.com/massive-com/arrow-datafusion", rev = "c958b4e" }
+datafusion-functions-aggregate = { git = "https://github.com/massive-com/arrow-datafusion", rev = "c958b4e" }
+datafusion-optimizer = { git = "https://github.com/massive-com/arrow-datafusion", rev = "c958b4e" }
+datafusion-physical-expr = { git = "https://github.com/massive-com/arrow-datafusion", rev = "c958b4e" }
+datafusion-physical-plan = { git = "https://github.com/massive-com/arrow-datafusion", rev = "c958b4e" }
+datafusion-sql = { git = "https://github.com/massive-com/arrow-datafusion", rev = "c958b4e" }
 futures = "0.3"
 itertools = "0.14"
 log = "0.4"
