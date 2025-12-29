@@ -45,7 +45,7 @@ use datafusion_common::DataFusionError;
 use datafusion_expr::LogicalPlan;
 use itertools::Itertools;
 
-use crate::MaterializedConfig;
+use crate::{rewrite::QueryRewriteCandidate, MaterializedConfig};
 
 /// The identifier of the column that [`RowMetadataSource`](row_metadata::RowMetadataSource) implementations should store row metadata in.
 pub const META_COLUMN: &str = "__meta";
@@ -121,6 +121,16 @@ pub trait Materialized: ListingTableLike {
     }
 }
 
+impl<T: Materialized> QueryRewriteCandidate for T {
+    fn rewrite_query(&self) -> Result<LogicalPlan, DataFusionError> {
+        Ok(self.query())
+    }
+
+    fn rewrite_config(&self) -> MaterializedConfig {
+        self.config()
+    }
+}
+
 /// Register a [`Materialized`] implementation in this registry.
 /// This allows `cast_to_materialized` to easily downcast a [`TableProvider`]
 /// into a `Materialized` where possible.
@@ -165,6 +175,35 @@ pub fn cast_to_materialized(
     Ok(Some(materialized))
 }
 
+/// Register a [`QueryRewriteCandidate`] implementation in this registry.
+/// This allows tables to participate in query rewriting even if they are not materialized views.
+///
+/// # Example
+/// ```rust
+/// use datafusion_materialized_views::register_query_rewrite_candidate;
+///
+/// // In user code:
+/// // register_query_rewrite_candidate::<MyTable>();
+/// ```
+pub fn register_query_rewrite_candidate<T: QueryRewriteCandidate + 'static>() {
+    TABLE_TYPE_REGISTRY.register_query_rewrite_candidate::<T>();
+}
+
+/// Attempt to cast the given TableProvider into a [`QueryRewriteCandidate`].
+/// If the table's type has not been registered using [`register_query_rewrite_candidate`]
+/// or [`register_materialized`], will return `None`.
+pub fn cast_to_query_rewrite_candidate(
+    table: &dyn TableProvider,
+) -> Option<&dyn QueryRewriteCandidate> {
+    TABLE_TYPE_REGISTRY
+        .cast_to_query_rewrite_candidate(table)
+        .or_else(|| {
+            TABLE_TYPE_REGISTRY
+                .cast_to_decorator(table)
+                .and_then(|decorator| cast_to_query_rewrite_candidate(decorator.base()))
+        })
+}
+
 /// A `TableProvider` that decorates other `TableProvider`s.
 /// Sometimes users may implement a `TableProvider` that overrides functionality of a base `TableProvider`.
 /// This API allows the decorator to also be recognized as `ListingTableLike` or `Materialized` automatically.
@@ -189,6 +228,7 @@ struct TableTypeRegistry {
     listing_table_accessors: DashMap<TypeId, (&'static str, Downcaster<dyn ListingTableLike>)>,
     materialized_accessors: DashMap<TypeId, (&'static str, Downcaster<dyn Materialized>)>,
     decorator_accessors: DashMap<TypeId, (&'static str, Downcaster<dyn Decorator>)>,
+    query_rewrite_accessors: DashMap<TypeId, (&'static str, Downcaster<dyn QueryRewriteCandidate>)>,
 }
 
 impl Debug for TableTypeRegistry {
@@ -212,6 +252,7 @@ impl Default for TableTypeRegistry {
             listing_table_accessors: DashMap::new(),
             materialized_accessors: DashMap::new(),
             decorator_accessors: DashMap::new(),
+            query_rewrite_accessors: DashMap::new(),
         };
         new.register_listing_table::<ListingTable>();
 
@@ -239,6 +280,7 @@ impl TableTypeRegistry {
             ),
         );
 
+        self.register_query_rewrite_candidate::<T>();
         self.register_listing_table::<T>();
     }
 
@@ -248,6 +290,19 @@ impl TableTypeRegistry {
             (
                 type_name::<T>(),
                 Arc::new(|any| any.downcast_ref::<T>().map(|t| t as &dyn Decorator)),
+            ),
+        );
+    }
+
+    fn register_query_rewrite_candidate<T: QueryRewriteCandidate + 'static>(&self) {
+        self.query_rewrite_accessors.insert(
+            TypeId::of::<T>(),
+            (
+                type_name::<T>(),
+                Arc::new(|any| {
+                    any.downcast_ref::<T>()
+                        .map(|t| t as &dyn QueryRewriteCandidate)
+                }),
             ),
         );
     }
@@ -272,6 +327,15 @@ impl TableTypeRegistry {
 
     fn cast_to_decorator<'a>(&'a self, table: &'a dyn TableProvider) -> Option<&'a dyn Decorator> {
         self.decorator_accessors
+            .get(&table.as_any().type_id())
+            .and_then(|r| r.value().1(table.as_any()))
+    }
+
+    fn cast_to_query_rewrite_candidate<'a>(
+        &'a self,
+        table: &'a dyn TableProvider,
+    ) -> Option<&'a dyn QueryRewriteCandidate> {
+        self.query_rewrite_accessors
             .get(&table.as_any().type_id())
             .and_then(|r| r.value().1(table.as_any()))
     }

@@ -16,6 +16,10 @@
 // under the License.
 
 use datafusion::{common::extensions_options, config::ConfigExtension};
+use datafusion_common::DataFusionError;
+use datafusion_expr::LogicalPlan;
+
+use crate::MaterializedConfig;
 
 /// Implements a query rewriting optimizer, also known as "view exploitation"
 /// in some academic sources.
@@ -35,4 +39,15 @@ extensions_options! {
 
 impl ConfigExtension for QueryRewriteOptions {
     const PREFIX: &'static str = "query_rewrite";
+}
+
+/// A trait for tables that can participate in query rewriting.
+pub trait QueryRewriteCandidate {
+    /// The query that defines this table for rewriting purposes.
+    /// For materialized views, this is the view definition.
+    /// For other tables, this could be a SELECT * FROM table with appropriate constraints.
+    fn rewrite_query(&self) -> Result<LogicalPlan, DataFusionError>;
+
+    /// Configuration to control query rewrite related features.
+    fn rewrite_config(&self) -> MaterializedConfig;
 }
