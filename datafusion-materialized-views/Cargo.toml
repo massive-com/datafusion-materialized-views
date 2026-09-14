@@ -30,7 +30,6 @@ rust-version.workspace = true
 [dependencies]
 datafusion-materialized-views-common.workspace = true
 
-aquamarine.workspace = true
 arrow.workspace = true
 arrow-schema.workspace = true
 async-trait.workspace = true
