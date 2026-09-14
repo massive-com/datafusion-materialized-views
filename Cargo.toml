@@ -28,7 +28,6 @@ keywords = ["arrow", "arrow-rs", "datafusion"]
 rust-version = "1.94.0"
 
 [dependencies]
-aquamarine = "0.6.0"
 arrow = "59.2.0"
 arrow-schema = "59.2.0"
 async-trait = "0.1.89"
