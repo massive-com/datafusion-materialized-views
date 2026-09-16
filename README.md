@@ -63,4 +63,4 @@ As of now, actually implementing materialized views is somewhat complicated, as 
 * Register the `mv_dependencies` and `stale_files` UDTFs (User Defined Table Functions) in your DataFusion `SessionContext`
 * Periodically regenerate directories marked as stale by `stale_files`
 
-A full walkthrough of this process including implementation can be seen in an integration test, under [`tests/materialized_listing_table.rs`](tests/materialized_listing_table.rs).
+A full walkthrough of this process including implementation can be seen in an integration test, under [`datafusion-materialized-views/tests/materialized_listing_table.rs`](datafusion-materialized-views/tests/materialized_listing_table.rs).
