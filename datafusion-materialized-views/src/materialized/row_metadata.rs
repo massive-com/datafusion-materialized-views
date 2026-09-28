@@ -90,6 +90,17 @@ impl RowMetadataRegistry {
     ) -> Option<Arc<dyn RowMetadataSource>> {
         self.metadata_sources.insert(table.to_string(), source)
     }
+    /// Removes a metadata source for a specific table.
+    ///
+    /// Returns the [RowMetadataSource] if found
+    pub fn remove_source(
+        &self,
+        table: &ResolvedTableReference,
+    ) -> Option<Arc<dyn RowMetadataSource>> {
+        self.metadata_sources
+            .remove(&table.to_string())
+            .map(|(_, source)| source)
+    }
 
     /// Retrieves the registered [`RowMetadataSource`] for a specific table.
     pub fn get_source(&self, table: &ResolvedTableReference) -> Result<Arc<dyn RowMetadataSource>> {
