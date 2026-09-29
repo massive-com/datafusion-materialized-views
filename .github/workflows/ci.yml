@@ -81,7 +81,7 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
       - name: Install taplo
-        run: cargo install taplo-cli --version ^0.8 --locked
+        run: cargo install taplo-cli --version ^0.10 --locked
       - name: Run taplo
         run: taplo format --check
 
@@ -131,10 +131,10 @@ jobs:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: EmbarkStudios/cargo-deny-action@v2
-      with:
-        command: check licenses
+      - uses: actions/checkout@v3
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check licenses
 
   coverage:
     if: github.event.pull_request.draft == false
