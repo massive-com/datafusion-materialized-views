@@ -55,6 +55,7 @@ use datafusion_expr::{
     TableScanBuilder,
 };
 use datafusion_functions::string::expr_fn::{concat, concat_ws};
+use datafusion_functions_aggregate::array_agg::array_agg;
 use itertools::{Either, Itertools};
 use std::{collections::HashSet, sync::Arc};
 
@@ -1062,19 +1063,26 @@ fn scan_columns_from_row_metadata(
 
     let source = row_metadata_registry.get_source(&table_ref)?;
 
-    // [`RowMetadataSource`] returns a Struct,
+    // [`RowMetadataSource`] returns a Struct per file,
     // but the MV algorithm expects a list of structs at each node in the plan.
-    let mut exprs = scan
+    // Collect every file of a partition into one row: files sharing partition values
+    // would otherwise be paired with each other by every join on those values,
+    // multiplying rows by the file count once per join.
+    let group_exprs = scan
         .projected_schema
         .fields()
         .iter()
         .map(|f| col((None, f)))
         .collect_vec();
-    exprs.push(make_array(vec![col(META_COLUMN)]).alias(META_COLUMN));
 
     source
         .row_metadata(table_ref, &scan)?
-        .project(exprs)?
+        .aggregate(
+            group_exprs,
+            vec![array_agg(col(META_COLUMN)).alias(META_COLUMN)],
+        )?
+        // An ungrouped aggregate over no files still yields a row, with a null list
+        .filter(col(META_COLUMN).is_not_null())?
         .alias(scan.table_name.clone())?
         .filter(
             scan.filters
@@ -1167,7 +1175,7 @@ mod test {
     use itertools::Itertools;
 
     use crate::materialized::{
-        dependencies::pushdown_projection_inexact,
+        dependencies::{push_up_file_metadata, pushdown_projection_inexact},
         register_decorator, register_materialized,
         row_metadata::{ObjectStoreRowMetadataSource, RowMetadataRegistry},
         Decorator, ListingTableLike, Materialized,
@@ -2137,6 +2145,56 @@ mod test {
                 .await
                 .unwrap_or_else(|e| panic!("{} failed: {e}", case.name));
         }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_binned_self_join_does_not_multiply_files() -> Result<()> {
+        let context = setup().await?;
+
+        context
+            .sql("CREATE TABLE t5 (year STRING, column1 INTEGER) AS VALUES ('2023', 1)")
+            .await?
+            .collect()
+            .await?;
+        context
+            .sql(
+                "INSERT INTO file_metadata VALUES
+                ('datafusion', 'test', 't5', 's3://t5/year=2023/bin=0.parquet', '2023-07-11T16:29:26Z', 0),
+                ('datafusion', 'test', 't5', 's3://t5/year=2023/bin=1.parquet', '2023-07-11T16:29:26Z', 0),
+                ('datafusion', 'test', 't5', 's3://t5/year=2023/bin=2.parquet', '2023-07-11T16:29:26Z', 0),
+                ('datafusion', 'test', 't5', 's3://t5/year=2023/bin=3.parquet', '2023-07-11T16:29:26Z', 0)",
+            )
+            .await?
+            .collect()
+            .await?;
+
+        let plan = context
+            .sql(
+                "SELECT a.year FROM t5 a
+                JOIN t5 b ON a.year = b.year
+                JOIN t5 c ON a.year = c.year",
+            )
+            .await?
+            .into_optimized_plan()?;
+
+        let registry = RowMetadataRegistry::new_with_default_source(Arc::new(
+            ObjectStoreRowMetadataSource::with_file_metadata(
+                context.table_provider("file_metadata").await?,
+            ),
+        ));
+        let pruned = pushdown_projection_inexact(plan, &[0].into_iter().collect())?;
+        let with_files = push_up_file_metadata(
+            pruned,
+            &context.copied_config().options().catalog,
+            &registry,
+        )?;
+
+        // Every file of a partition shares its partition values, so a join on them must
+        // pair partitions, not files. Pairing files yields bins^joins rows per partition.
+        let rows = DataFrame::new(context.state(), with_files).count().await?;
+        assert_eq!(rows, 1);
 
         Ok(())
     }
