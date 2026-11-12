@@ -97,7 +97,7 @@ impl TableProvider for FileMetadata {
     async fn scan(
         &self,
         session_state: &dyn Session,
-        projection: Option<&Vec<usize>>,
+        projection: Option<&[usize]>,
         filters: &[Expr],
         limit: Option<usize>,
     ) -> Result<Arc<dyn ExecutionPlan>> {
@@ -114,7 +114,7 @@ impl TableProvider for FileMetadata {
 
         let exec = FileMetadataExec::try_new(
             self.table_schema.clone(),
-            projection.cloned(),
+            projection.map(<[usize]>::to_vec),
             filters,
             limit,
             self.catalog_list.clone(),
